@@ -43,9 +43,9 @@ app.get('/api/health', (_req, res) => {
   })
 })
 
-// ─── 路由注册（后续 Task 逐步添加）─────────────
-// import authRoutes from './routes/auth.js'
-// app.use('/api/auth', authRoutes)
+// ─── 路由注册 ────────────────────────────────
+import authRoutes from './routes/auth.js'
+app.use('/api/auth', authRoutes)
 
 // ─── 404 — 接口不存在 ──────────────────────────
 app.use((_req, _res, next) => {
