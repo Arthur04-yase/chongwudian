@@ -1,0 +1,383 @@
+// 🐾 宠物店管理系统 — 数据库 Schema v2
+// 共 15 张表 | SQLite 开发 / MySQL 生产
+//
+// 设计决策说明：
+// · Role 暂不使用独立表 — 当前仅 3 种角色（owner/groomer/receptionist），
+//   字符串字段足以满足需求。当需要细粒度权限（如「只能查看自己服务的预约」）
+//   时再迁移到 Role + Permission 表结构，届时通过 Prisma migrate 平滑迁移。
+// · 所有字符串枚举值统一在 src/constants/enums.ts 定义，此处仅作注释标注。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 员工表
+// ═══════════════════════════════════════════════════════════════
+model Staff {
+  id              Int      @id @default(autoincrement())
+  name            String
+  phone           String   @unique
+  password        String // bcrypt 哈希
+  role            String // owner | groomer | receptionist（详见 enums.ts）
+  avatarUrl       String?  @map("avatar_url")
+  commissionType  String?  @map("commission_type") // fixed | percent
+  commissionValue Float?   @map("commission_value")
+  isActive        Boolean  @default(true) @map("is_active")
+  hiredDate       String?  @map("hired_date") // YYYY-MM-DD
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  appointments        Appointment[]  @relation("AssignedGroomer")
+  petNotes            PetNote[]
+  createdAppointments Appointment[]  @relation("CreatedByStaff")
+  careLogs            CareLog[]
+  payments            Payment[]
+  inventoryLogs       InventoryLog[]
+  schedules           Schedule[]
+
+  @@map("staff")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 客户（主人）表
+//
+// 注意：isMember 已移除。会员身份通过存在有效 MembershipCard 自动判定，
+// 避免数据冗余和不一致。查询时使用：customer.membershipCards.some(c => c.isActive)
+// ═══════════════════════════════════════════════════════════════
+model Customer {
+  id            Int      @id @default(autoincrement())
+  name          String
+  phone         String   @unique
+  wechatId      String?  @map("wechat_id")
+  avatarUrl     String?  @map("avatar_url")
+  address       String?
+  source        String? // 朋友介绍 | 大众点评 | 路过 | 抖音 | 其他
+  totalSpent    Float    @default(0) @map("total_spent")
+  lastVisitDate String?  @map("last_visit_date") // YYYY-MM-DD
+  visitCount    Int      @default(0) @map("visit_count")
+  notes         String?
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  pets            Pet[]
+  appointments    Appointment[]
+  boardingRecords Boarding[]
+  membershipCards MembershipCard[]
+
+  @@map("customer")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 宠物表
+// ═══════════════════════════════════════════════════════════════
+model Pet {
+  id            Int      @id @default(autoincrement())
+  customerId    Int      @map("customer_id")
+  name          String
+  species       String // dog | cat | other
+  breed         String?
+  gender        String? // male | female
+  isNeutered    Boolean  @default(false) @map("is_neutered")
+  birthDate     String?  @map("birth_date") // YYYY-MM-DD
+  weightKg      Float?   @map("weight_kg")
+  color         String?
+  vaccineExpiry String?  @map("vaccine_expiry") // YYYY-MM-DD
+  avatarUrl     String?  @map("avatar_url") // 头像
+  coverImage    String?  @map("cover_image") // 封面（可选）
+  isAggressive  Boolean  @default(false) @map("is_aggressive")
+  isActive      Boolean  @default(true) @map("is_active")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  petNotes        PetNote[]
+  appointments    Appointment[]
+  boardingRecords Boarding[]
+
+  @@index([customerId])
+  @@map("pet")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 宠物备注/标签表
+// ═══════════════════════════════════════════════════════════════
+model PetNote {
+  id        Int      @id @default(autoincrement())
+  petId     Int      @map("pet_id")
+  staffId   Int      @map("staff_id")
+  category  String // behavior | health | preference | other
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pet   Pet   @relation(fields: [petId], references: [id])
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@index([petId])
+  @@map("pet_note")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 服务项目表
+// ═══════════════════════════════════════════════════════════════
+model Service {
+  id               Int      @id @default(autoincrement())
+  name             String
+  category         String // bath | groom | boarding | other
+  price            Float
+  memberPrice      Float?   @map("member_price")
+  durationMinutes  Int      @map("duration_minutes")
+  commissionAmount Float    @default(0) @map("commission_amount")
+  description      String?
+  isActive         Boolean  @default(true) @map("is_active")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  appointmentItems AppointmentItem[]
+
+  @@map("service")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 预约单表
+// ═══════════════════════════════════════════════════════════════
+model Appointment {
+  id              Int      @id @default(autoincrement())
+  appointmentNo   String   @unique @map("appointment_no") // APT{YYYYMMDD}{4位序号}
+  customerId      Int      @map("customer_id")
+  petId           Int      @map("pet_id")
+  staffId         Int?     @map("staff_id") // 指派美容师，可空（到店再分）
+  appointmentDate String   @map("appointment_date") // YYYY-MM-DD
+  startTime       String   @map("start_time") // HH:mm
+  endTime         String   @map("end_time") // HH:mm
+  status          String   @default("pending") // 状态流转见 enums.ts AppointmentStatusTransitions
+  source          String   @default("phone") // phone | wechat | walk_in
+  notes           String?
+  createdBy       Int      @map("created_by")
+  isDeleted       Boolean  @default(false) @map("is_deleted")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  customer         Customer          @relation(fields: [customerId], references: [id])
+  pet              Pet               @relation(fields: [petId], references: [id])
+  assignedStaff    Staff?            @relation("AssignedGroomer", fields: [staffId], references: [id])
+  creator          Staff             @relation("CreatedByStaff", fields: [createdBy], references: [id])
+  appointmentItems AppointmentItem[]
+  payments         Payment[]
+  boarding         Boarding?
+
+  @@index([appointmentDate])
+  @@index([status])
+  @@index([customerId])
+  @@map("appointment")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 预约服务明细表
+// ═══════════════════════════════════════════════════════════════
+model AppointmentItem {
+  id               Int      @id @default(autoincrement())
+  appointmentId    Int      @map("appointment_id")
+  serviceId        Int      @map("service_id")
+  price            Float // 实际收费
+  commissionAmount Float    @default(0) @map("commission_amount")
+  status           String   @default("pending") // pending | in_progress | completed | cancelled
+  isDeleted        Boolean  @default(false) @map("is_deleted")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+
+  @@index([appointmentId])
+  @@map("appointment_item")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 支付记录表
+// ═══════════════════════════════════════════════════════════════
+model Payment {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @map("appointment_id")
+  amount        Float
+  method        String // wechat | alipay | cash | card_balance | card_times
+  transactionNo String?  @map("transaction_no")
+  paidAt        DateTime @default(now()) @map("paid_at")
+  createdBy     Int      @map("created_by")
+  notes         String?
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  staff       Staff       @relation(fields: [createdBy], references: [id])
+
+  @@index([appointmentId])
+  @@index([paidAt])
+  @@map("payment")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 寄养记录表
+// ═══════════════════════════════════════════════════════════════
+model Boarding {
+  id               Int      @id @default(autoincrement())
+  petId            Int      @map("pet_id")
+  customerId       Int      @map("customer_id")
+  appointmentId    Int?     @unique @map("appointment_id")
+  cageNo           String   @map("cage_no")
+  checkInDate      String   @map("check_in_date") // YYYY-MM-DD
+  checkOutDate     String   @map("check_out_date") // YYYY-MM-DD（预计）
+  actualCheckOut   String?  @map("actual_check_out") // YYYY-MM-DD HH:mm（实际）
+  dailyRate        Float    @map("daily_rate")
+  totalAmount      Float    @default(0) @map("total_amount")
+  deposit          Float    @default(0)
+  status           String   @default("active") // active | checked_out | cancelled
+  broughtItems     String?  @map("brought_items")
+  emergencyContact String?  @map("emergency_contact")
+  notes            String?
+  isDeleted        Boolean  @default(false) @map("is_deleted")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  pet         Pet          @relation(fields: [petId], references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  careLogs    CareLog[]
+
+  @@index([status])
+  @@index([petId])
+  @@map("boarding")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 寄养看护日志表（immutable log — 无 updatedAt）
+// ═══════════════════════════════════════════════════════════════
+model CareLog {
+  id         Int      @id @default(autoincrement())
+  boardingId Int      @map("boarding_id")
+  staffId    Int      @map("staff_id")
+  logType    String   @map("log_type") // feeding | walking | water | cleaning | medical | other
+  content    String
+  photoUrl   String?  @map("photo_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  boarding Boarding @relation(fields: [boardingId], references: [id])
+  staff    Staff    @relation(fields: [staffId], references: [id])
+
+  @@index([boardingId])
+  @@map("care_log")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 会员卡表
+// ═══════════════════════════════════════════════════════════════
+model MembershipCard {
+  id           Int      @id @default(autoincrement())
+  customerId   Int      @map("customer_id")
+  cardType     String   @map("card_type") // balance | times
+  cardNo       String   @unique @map("card_no")
+  balance      Float    @default(0) // 储值余额
+  totalTimes   Int      @default(0) @map("total_times") // 总次数
+  usedTimes    Int      @default(0) @map("used_times") // 已用次数
+  discountRate Float    @default(1.0) @map("discount_rate") // 0.85 = 85折
+  issuedDate   String   @map("issued_date") // YYYY-MM-DD
+  expiryDate   String?  @map("expiry_date") // YYYY-MM-DD
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  customer     Customer          @relation(fields: [customerId], references: [id])
+  transactions CardTransaction[]
+
+  @@index([customerId])
+  @@map("membership_card")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 会员卡消费记录表（immutable log — 无 updatedAt）
+// ═══════════════════════════════════════════════════════════════
+model CardTransaction {
+  id            Int      @id @default(autoincrement())
+  cardId        Int      @map("card_id")
+  appointmentId Int?     @map("appointment_id")
+  type          String // recharge | deduct | refund
+  amount        Float    @default(0)
+  times         Int      @default(0)
+  balanceAfter  Float?   @map("balance_after")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  card MembershipCard @relation(fields: [cardId], references: [id])
+
+  @@index([cardId])
+  @@map("card_transaction")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 商品/库存表
+// ═══════════════════════════════════════════════════════════════
+model Product {
+  id           Int      @id @default(autoincrement())
+  name         String
+  category     String // consumable | retail | food | other
+  unit         String   @default("个") // 瓶 | 袋 | 包 | ml | 个
+  currentStock Float    @default(0) @map("current_stock")
+  safetyStock  Float    @default(0) @map("safety_stock")
+  costPrice    Float    @default(0) @map("cost_price")
+  retailPrice  Float    @default(0) @map("retail_price")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  inventoryLogs InventoryLog[]
+
+  @@map("product")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 库存流水表（immutable log — 无 updatedAt）
+// ═══════════════════════════════════════════════════════════════
+model InventoryLog {
+  id                   Int      @id @default(autoincrement())
+  productId            Int      @map("product_id")
+  type                 String // in | out | loss
+  quantity             Float
+  relatedAppointmentId Int?     @map("related_appointment_id")
+  createdBy            Int      @map("created_by")
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  staff   Staff   @relation(fields: [createdBy], references: [id])
+
+  @@index([productId])
+  @@map("inventory_log")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 员工排班表
+// ═══════════════════════════════════════════════════════════════
+model Schedule {
+  id              Int      @id @default(autoincrement())
+  staffId         Int      @map("staff_id")
+  date            String // YYYY-MM-DD
+  startTime       String   @map("start_time") // HH:mm
+  endTime         String   @map("end_time") // HH:mm
+  maxAppointments Int      @default(10) @map("max_appointments")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, date])
+  @@map("schedule")
+}

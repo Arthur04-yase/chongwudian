@@ -1,0 +1,42 @@
+{
+  "name": "pet-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "🐾 宠物店智能管理系统 — 帮助宠物店管理猫狗洗澡、美容、寄养等业务",
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w server && npm run build -w client",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:seed": "npm run db:seed -w server",
+    "db:studio": "npm run db:studio -w server",
+    "db:push": "npm run db:push -w server",
+    "db:generate": "npm run db:generate -w server",
+    "lint": "npm run lint -w client && npm run lint -w server",
+    "lint:client": "npm run lint -w client",
+    "lint:server": "npm run lint -w server",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "typecheck": "npm run typecheck -w client && npm run typecheck -w server",
+    "typecheck:client": "npm run typecheck -w client",
+    "typecheck:server": "npm run typecheck -w server",
+    "prepare": "husky"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.2.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.9.5",
+    "prettier-plugin-prisma": "^5.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md,prisma}": [
+      "prettier --write"
+    ]
+  }
+}
