@@ -1,6 +1,6 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { Suspense } from 'react'
-import { Sidebar } from './sidebar'
+import { Sidebar, MobileSidebar, MobileTabBar } from './sidebar'
 import { Header } from './header'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -36,15 +36,21 @@ export function AppLayout() {
       {/* 桌面端侧边栏 */}
       <Sidebar />
 
+      {/* 移动端抽屉 */}
+      <MobileSidebar />
+
       {/* 主内容区 */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto bg-muted/30 p-4 pb-20 md:p-6 md:pb-6">
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>
         </main>
       </div>
+
+      {/* 移动端底部 Tab Bar */}
+      <MobileTabBar />
     </div>
   )
 }

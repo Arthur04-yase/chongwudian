@@ -11,33 +11,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/use-auth'
-
-const pageTitles: Record<string, string> = {
-  '/dashboard': '工作台',
-  '/appointments': '预约管理',
-  '/customers': '客户管理',
-  '/services': '服务管理',
-  '/cashier': '收银管理',
-  '/boarding': '寄养管理',
-  '/inventory': '库存管理',
-  '/staff': '员工管理',
-  '/reports': '数据统计',
-  '/settings': '系统设置',
-}
+import { useSidebarStore } from '@/stores/sidebar-store'
+import { NAV_ITEMS } from './sidebar'
 
 export function Header() {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
 
+  // 根据路径匹配页面标题
   const title =
-    Object.entries(pageTitles).find(([path]) => location.pathname.startsWith(path))?.[1] || ''
+    NAV_ITEMS.find((item) =>
+      item.to === '/dashboard'
+        ? location.pathname === '/dashboard'
+        : location.pathname.startsWith(item.to)
+    )?.label || ''
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
       {/* 左侧 */}
       <div className="flex items-center gap-3">
-        {/* 移动端菜单按钮 */}
-        <Button variant="ghost" size="icon-sm" className="md:hidden">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="md:hidden"
+          onClick={() => setMobileOpen(true)}
+        >
           <Menu className="h-5 w-5" />
         </Button>
         <h1 className="text-base font-semibold">{title}</h1>
@@ -45,12 +44,9 @@ export function Header() {
 
       {/* 右侧 */}
       <div className="flex items-center gap-2">
-        {/* 通知 */}
+        {/* 通知（占位，V2 实现） */}
         <Button variant="ghost" size="icon-sm" className="relative">
           <Bell className="h-5 w-5" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-            3
-          </span>
         </Button>
 
         {/* 用户菜单 */}
