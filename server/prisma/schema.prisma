@@ -131,13 +131,17 @@ model PetNote {
 model Service {
   id               Int      @id @default(autoincrement())
   name             String
-  category         String // bath | groom | boarding | other
+  category         String // bath | groom | care | medicated | boarding | other
+  sizeCategory     String   @default("multi") @map("size_category") // small | medium | large | cat | multi
   price            Float
   memberPrice      Float?   @map("member_price")
   durationMinutes  Int      @map("duration_minutes")
   commissionAmount Float    @default(0) @map("commission_amount")
+  commissionType   String   @default("fixed") @map("commission_type") // fixed | percent
+  coverImage       String?  @map("cover_image")
   description      String?
   isActive         Boolean  @default(true) @map("is_active")
+  isDeleted        Boolean  @default(false) @map("is_deleted")
   sortOrder        Int      @default(0) @map("sort_order")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
