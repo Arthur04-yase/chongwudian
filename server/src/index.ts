@@ -47,9 +47,11 @@ app.get('/api/health', (_req, res) => {
 import authRoutes from './routes/auth.js'
 import serviceRoutes from './routes/services.js'
 import staffRoutes from './routes/staff.js'
+import customerRoutes from './routes/customers.js'
 app.use('/api/auth', authRoutes)
 app.use('/api/services', serviceRoutes)
 app.use('/api/staff', staffRoutes)
+app.use('/api/customers', customerRoutes)
 
 // ─── 404 — 接口不存在 ──────────────────────────
 app.use((_req, _res, next) => {
