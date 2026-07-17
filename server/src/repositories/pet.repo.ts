@@ -122,7 +122,15 @@ export const petRepo = {
   async findByCustomer(customerId: number) {
     return prisma.pet.findMany({
       where: { customerId, isDeleted: false },
-      select: { id: true, name: true, species: true, breed: true, avatarUrl: true, gender: true },
+      select: {
+        id: true,
+        name: true,
+        species: true,
+        breed: true,
+        avatarUrl: true,
+        gender: true,
+        isAggressive: true,
+      },
     })
   },
 }

@@ -49,11 +49,13 @@ import serviceRoutes from './routes/services.js'
 import staffRoutes from './routes/staff.js'
 import customerRoutes from './routes/customers.js'
 import petRoutes from './routes/pets.js'
+import appointmentRoutes from './routes/appointments.js'
 app.use('/api/auth', authRoutes)
 app.use('/api/services', serviceRoutes)
 app.use('/api/staff', staffRoutes)
 app.use('/api/customers', customerRoutes)
 app.use('/api/pets', petRoutes)
+app.use('/api/appointments', appointmentRoutes)
 
 // ─── 404 — 接口不存在 ──────────────────────────
 app.use((_req, _res, next) => {
