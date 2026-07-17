@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -f prisma/dev.db prisma/dev.db-journal)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsx *)"
+    ]
+  }
+}
