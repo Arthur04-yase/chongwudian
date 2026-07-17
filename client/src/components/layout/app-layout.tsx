@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { Suspense } from 'react'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
@@ -14,12 +14,13 @@ function PageLoader() {
 
 export function AppLayout() {
   const { isLoading, isAuthenticated } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-muted/30">
         <div className="text-center">
-          <div className="mb-4 text-4xl">🐾</div>
+          <div className="mb-4 text-4xl animate-bounce">🐾</div>
           <p className="text-muted-foreground">加载中...</p>
         </div>
       </div>
@@ -27,7 +28,7 @@ export function AppLayout() {
   }
 
   if (!isAuthenticated) {
-    return null // AuthGuard 会处理重定向
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
 
   return (

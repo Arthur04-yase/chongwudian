@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import { AppLayout } from '@/components/layout/app-layout'
 import { AuthProvider } from '@/hooks/use-auth'
 
@@ -48,6 +49,7 @@ function App() {
       <TooltipProvider>
         <BrowserRouter>
           <AuthProvider>
+            <Toaster richColors closeButton />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* 公开路由 */}

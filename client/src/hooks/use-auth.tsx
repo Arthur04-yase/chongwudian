@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore, type User } from '@/stores/auth-store'
 import { apiClient } from '@/lib/api-client'
 
@@ -41,7 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
             if (res.data.success) {
               const { accessToken: newToken, refreshToken: newRefresh } = res.data.data
-              useAuthStore.getState().setAuth(useAuthStore.getState().user!, newToken, newRefresh)
+              const currentUser = useAuthStore.getState().user
+              if (currentUser) {
+                useAuthStore.getState().setAuth(currentUser, newToken, newRefresh)
+              }
             } else {
               storeLogout()
             }
@@ -56,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     initAuth()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const login = async (phone: string, password: string) => {
     const res = await apiClient.post('/api/auth/login', { phone, password })
@@ -64,7 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user, accessToken, refreshToken } = res.data.data
       setAuth(user, accessToken, refreshToken)
     } else {
-      throw new Error(res.data.error || '登录失败')
+      // 后端返回 success: false（如参数校验失败）
+      const errMsg = res.data?.error?.message || res.data?.error || '登录失败'
+      throw new Error(errMsg)
     }
   }
 
@@ -85,21 +90,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within AuthProvider')
   }
   return ctx
-}
-
-/**
- * 路由守卫 Hook — 未登录跳转到 /login
- */
-export function useAuthGuard() {
-  const { isAuthenticated, isLoading } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login', { state: { from: location.pathname }, replace: true })
-    }
-  }, [isAuthenticated, isLoading, navigate, location.pathname])
-
-  return { isAuthenticated, isLoading }
 }

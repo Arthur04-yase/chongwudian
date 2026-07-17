@@ -21,7 +21,9 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// 响应拦截器：401 自动刷新 token，失败则退出登录
+// 响应拦截器：401 自动刷新 token
+// 注意：登录、刷新、获取当前用户接口不触发自动刷新，
+// 由 AuthProvider 统一管理认证流程
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (value: unknown) => void
@@ -44,13 +46,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // 如果是 401 且不是登录或刷新 token 请求
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes('/api/auth/login') &&
-      !originalRequest.url?.includes('/api/auth/refresh')
-    ) {
+    // 以下接口不触发自动刷新，由 AuthProvider 自行处理
+    const skipRefreshUrls = ['/api/auth/login', '/api/auth/refresh', '/api/auth/me']
+    const shouldSkip = skipRefreshUrls.some((url) => originalRequest.url?.includes(url))
+
+    if (error.response?.status === 401 && !originalRequest._retry && !shouldSkip) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
