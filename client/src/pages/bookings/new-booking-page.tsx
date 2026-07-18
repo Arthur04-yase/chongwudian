@@ -110,6 +110,21 @@ export default function NewBookingPage() {
         .data as Staff[],
   })
 
+  // ── 美容师档期 ──
+  const { data: staffSchedule } = useQuery({
+    queryKey: ['staff-schedule', staffId, bookDate],
+    queryFn: async () => {
+      if (!staffId) return []
+      return (await apiClient.get(`/api/appointments?date=${bookDate}`)).data.data as {
+        id: number
+        startTime: string
+        endTime: string
+        pet: { name: string }
+      }[]
+    },
+    enabled: !!staffId,
+  })
+
   // ── 自动聚焦 ──
   useEffect(() => {
     searchRef.current?.focus()
@@ -468,6 +483,25 @@ export default function NewBookingPage() {
                 ))}
               </div>
             </div>
+
+            {/* ── 美容师档期预览 ── */}
+            {staffId && staffSchedule && staffSchedule.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                <p className="text-xs font-medium text-amber-700 mb-1.5">
+                  📅 该美容师今日已有预约：
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {staffSchedule.map((a) => (
+                    <span
+                      key={a.id}
+                      className="inline-block rounded-md border border-amber-200 bg-white px-2 py-0.5 text-[11px]"
+                    >
+                      {a.startTime}-{a.endTime} {a.pet.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <Label>备注</Label>

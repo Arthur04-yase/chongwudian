@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight, Calendar, Phone, PawPrint } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Calendar, Phone, PawPrint, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { apiClient } from '@/lib/api-client'
+import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
 interface ApptItem {
@@ -65,9 +66,11 @@ function today() {
 
 export default function BookingListPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [date, setDate] = useState(today)
   const [statusFilter, setStatusFilter] = useState('')
+  const [myOnly, setMyOnly] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['appointments', date],
@@ -76,9 +79,10 @@ export default function BookingListPage() {
   })
 
   const appointments = data || []
-  const filtered = statusFilter
-    ? appointments.filter((a) => a.status === statusFilter)
-    : appointments
+  let filtered = statusFilter ? appointments.filter((a) => a.status === statusFilter) : appointments
+  if (myOnly && user) {
+    filtered = filtered.filter((a) => a.assignedStaff?.id === user.id)
+  }
 
   const changeDate = (days: number) => {
     const d = new Date(date)
@@ -142,6 +146,16 @@ export default function BookingListPage() {
             </Badge>
           )
         })}
+        {user?.role === 'groomer' && (
+          <Badge
+            variant={myOnly ? 'default' : 'outline'}
+            className="cursor-pointer text-xs ml-auto"
+            onClick={() => setMyOnly(!myOnly)}
+          >
+            <UserRound className="mr-1 h-3 w-3" />
+            {myOnly ? '只看我的' : '全部美容师'}
+          </Badge>
+        )}
       </div>
 
       {/* 列表 */}

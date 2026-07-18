@@ -11,6 +11,7 @@ import {
   UserRound,
   PawPrint,
   AlertTriangle,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,11 +35,17 @@ interface TodayData {
     petName: string
     petSpecies: string
     groomerName: string
+    staffId?: number
     services: string[]
     startTime: string
   }[]
   todayRevenue: { total: number; count: number }
   boarding: { active: number; checkoutToday: number; overdue: number }
+  alerts: {
+    checkoutPending: { id: number; petName: string; customerName: string; message: string }[]
+    lateArrivals: { id: number; petName: string; customerName: string; message: string }[]
+    lowStock: { productName: string; message: string }[]
+  }
 }
 
 const SPECIES_EMOJI: Record<string, string> = { dog: '🐕', cat: '🐈', other: '🐾' }
@@ -56,6 +63,7 @@ export default function DashboardPage() {
   const services = data?.inProgressServices || []
   const revenue = data?.todayRevenue
   const boarding = data?.boarding
+  const alerts = data?.alerts
 
   if (isError) {
     return (
@@ -189,6 +197,75 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* ⚠️ 待办提醒 */}
+          {alerts &&
+            (alerts.checkoutPending.length > 0 ||
+              alerts.lateArrivals.length > 0 ||
+              alerts.lowStock.length > 0) && (
+              <Card className="border-amber-200 bg-amber-50/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    待处理
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5">
+                  {alerts.checkoutPending.map((a) => (
+                    <button
+                      key={a.id}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-amber-100/50 transition-colors"
+                      onClick={() => navigate(`/cashier/${a.id}`)}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-amber-300 text-amber-700 shrink-0"
+                      >
+                        待结账
+                      </Badge>
+                      <span className="flex-1 truncate">
+                        {a.petName} · {a.customerName}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    </button>
+                  ))}
+                  {alerts.lateArrivals.map((a) => (
+                    <button
+                      key={a.id}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-amber-100/50 transition-colors"
+                      onClick={() => navigate(`/appointments/${a.id}`)}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-red-300 text-red-700 shrink-0"
+                      >
+                        超时未到
+                      </Badge>
+                      <span className="flex-1 truncate">
+                        {a.petName} · {a.customerName}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    </button>
+                  ))}
+                  {alerts.lowStock.map((a) => (
+                    <button
+                      key={a.productName}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-amber-100/50 transition-colors"
+                      onClick={() => navigate('/inventory')}
+                    >
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-red-300 text-red-700 shrink-0"
+                      >
+                        库存不足
+                      </Badge>
+                      <span className="flex-1 truncate">{a.productName}</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    </button>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
           {/* 今日营收 */}
           <Card>

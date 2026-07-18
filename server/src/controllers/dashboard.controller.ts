@@ -10,7 +10,9 @@ export async function today(
 ): Promise<void> {
   try {
     const date = (req.query.date as string) || new Date().toISOString().slice(0, 10)
-    const data = await dashboardRepo.getToday(date)
+    // 美容师登录时只显示自己的服务队列
+    const staffId = req.staff?.role === 'groomer' ? req.staff.id : undefined
+    const data = await dashboardRepo.getToday(date, staffId)
     success(res, data)
   } catch (err) {
     next(err)
