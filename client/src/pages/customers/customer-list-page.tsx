@@ -72,6 +72,7 @@ export default function CustomerListPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [search, setSearch] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
   const [page, setPage] = useState(1)
   // Sheet
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -85,6 +86,7 @@ export default function CustomerListPage() {
 
   const queryParams: Record<string, string> = { page: String(page), pageSize: '24' }
   if (search) queryParams.search = search
+  if (sourceFilter) queryParams.source = sourceFilter
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['customers', queryParams],
@@ -165,6 +167,16 @@ export default function CustomerListPage() {
             setPage(1)
           }}
         />
+      </div>
+
+      {/* 来源筛选 */}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant={sourceFilter === '' ? 'default' : 'outline'} className="cursor-pointer text-xs"
+          onClick={() => { setSourceFilter(''); setPage(1) }}>全部来源</Badge>
+        {['朋友介绍', '大众点评', '路过', '抖音', '其他'].map((s) => (
+          <Badge key={s} variant={sourceFilter === s ? 'default' : 'outline'} className="cursor-pointer text-xs"
+            onClick={() => { setSourceFilter(s); setPage(1) }}>{s}</Badge>
+        ))}
       </div>
 
       {/* ── 内容 ── */}

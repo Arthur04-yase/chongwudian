@@ -150,7 +150,10 @@ export default function BookingDetailPage() {
                 variant="outline"
                 size="sm"
                 disabled={changeStatusMutation.isPending}
-                onClick={() => changeStatusMutation.mutate(a.status)}
+                onClick={() => {
+                  const label = a.label.replace(/[✅❌▶🏠]/g, '').trim()
+                  if (confirm(`确定「${label}」？`)) changeStatusMutation.mutate(a.status)
+                }}
               >
                 {a.label}
               </Button>
