@@ -698,7 +698,6 @@ async function main() {
         cardType: 'balance',
         cardNo: 'C2025-00038',
         balance: 560,
-        discountRate: 0.85,
         issuedDate: '2025-06-01',
       },
       {
@@ -715,7 +714,6 @@ async function main() {
         cardType: 'balance',
         cardNo: 'C2026-00015',
         balance: 1200,
-        discountRate: 0.85,
         issuedDate: '2026-01-10',
       },
     ],

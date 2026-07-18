@@ -79,7 +79,6 @@ export const customerRepo = {
             balance: true,
             totalTimes: true,
             usedTimes: true,
-            discountRate: true,
             expiryDate: true,
           },
         },

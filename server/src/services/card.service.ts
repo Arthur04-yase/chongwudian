@@ -18,7 +18,6 @@ export const cardService = {
     cardType: string
     balance?: number
     totalTimes?: number
-    discountRate?: number
     expiryDate?: string
   }) {
     if (!['balance', 'times'].includes(dto.cardType)) throw AppError.badRequest('卡类型无效')

@@ -61,7 +61,6 @@ interface CustomerDetail {
     balance: number
     totalTimes: number
     usedTimes: number
-    discountRate: number
     expiryDate: string | null
     isActive: boolean
   }[]
@@ -108,7 +107,6 @@ export default function CustomerDetailPage() {
     cardType: 'balance',
     balance: 500,
     totalTimes: 10,
-    discountRate: 1.0,
     expiryDate: '',
   })
   const [rechargeForm, setRechargeForm] = useState({ amount: 200, times: 5 })
@@ -244,7 +242,6 @@ export default function CustomerDetailPage() {
                 cardType: 'balance',
                 balance: 500,
                 totalTimes: 10,
-                discountRate: 0.85,
                 expiryDate: '',
               })
               setCardSheet(true)
@@ -285,11 +282,6 @@ export default function CustomerDetailPage() {
                         {card.cardNo}
                       </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {card.discountRate < 1
-                        ? `${(card.discountRate * 100).toFixed(0)}折`
-                        : '无折扣'}
-                    </Badge>
                   </div>
 
                   <div className="flex items-baseline gap-1 mb-1">
@@ -539,23 +531,6 @@ export default function CustomerDetailPage() {
                 />
               </div>
             )}
-            <div>
-              <Label>折扣率</Label>
-              <Select
-                value={String(cardForm.discountRate)}
-                onValueChange={(v) => setCardForm({ ...cardForm, discountRate: Number(v ?? '1') })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">无折扣 (100%)</SelectItem>
-                  <SelectItem value="0.95">95折</SelectItem>
-                  <SelectItem value="0.85">85折（推荐）</SelectItem>
-                  <SelectItem value="0.80">8折</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <Label>有效期</Label>
               <Input
