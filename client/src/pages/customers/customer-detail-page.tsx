@@ -10,6 +10,9 @@ import {
   Plus,
   UserRound,
   ChevronRight,
+  CreditCard,
+  Gift,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +32,7 @@ import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
+// ─── 类型 ─────────────────
 interface CustomerDetail {
   id: number
   name: string
@@ -59,6 +63,7 @@ interface CustomerDetail {
     usedTimes: number
     discountRate: number
     expiryDate: string | null
+    isActive: boolean
   }[]
 }
 
@@ -87,17 +92,26 @@ const emptyPet: PetFormData = {
   isNeutered: false,
 }
 
-async function fetchCustomer(id: string) {
-  return (await apiClient.get(`/api/customers/${id}`)).data.data as CustomerDetail
-}
-
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  // 宠物
   const [petSheet, setPetSheet] = useState(false)
   const [petForm, setPetForm] = useState<PetFormData>(emptyPet)
+  // 会员卡
+  const [cardSheet, setCardSheet] = useState(false)
+  const [rechargeSheet, setRechargeSheet] = useState(false)
+  const [rechargeCardId, setRechargeCardId] = useState<number | null>(null)
+  const [cardForm, setCardForm] = useState({
+    cardType: 'balance',
+    balance: 500,
+    totalTimes: 10,
+    discountRate: 1.0,
+    expiryDate: '',
+  })
+  const [rechargeForm, setRechargeForm] = useState({ amount: 200, times: 5 })
   const [saving, setSaving] = useState(false)
 
   const {
@@ -106,10 +120,11 @@ export default function CustomerDetailPage() {
     isError,
   } = useQuery({
     queryKey: ['customer', id],
-    queryFn: () => fetchCustomer(id!),
+    queryFn: async () => (await apiClient.get(`/api/customers/${id}`)).data.data as CustomerDetail,
     enabled: !!id,
   })
 
+  // 添加宠物
   const addPetMutation = useMutation({
     mutationFn: () =>
       apiClient.post('/api/pets', {
@@ -124,6 +139,30 @@ export default function CustomerDetailPage() {
       navigate(`/pets/${res.data.data.id}`)
     },
     onError: () => toast.error('添加失败'),
+  })
+
+  // 开卡
+  const createCardMutation = useMutation({
+    mutationFn: () => apiClient.post('/api/cards', { ...cardForm, customerId: Number(id) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', id] })
+      setCardSheet(false)
+      toast.success('会员卡已开通')
+    },
+    onError: (err: unknown) =>
+      toast.error((err as any)?.response?.data?.error?.message || '开卡失败'),
+  })
+
+  // 充值
+  const rechargeMutation = useMutation({
+    mutationFn: () => apiClient.post(`/api/cards/${rechargeCardId}/recharge`, rechargeForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', id] })
+      setRechargeSheet(false)
+      toast.success('充值成功')
+    },
+    onError: (err: unknown) =>
+      toast.error((err as any)?.response?.data?.error?.message || '充值失败'),
   })
 
   if (isLoading)
@@ -144,9 +183,11 @@ export default function CustomerDetailPage() {
       </Card>
     )
 
+  const cards = customer.membershipCards || []
+  const hasMember = cards.length > 0
+
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      {/* 返回 */}
       <Button variant="ghost" size="icon-sm" onClick={() => navigate('/customers')}>
         <ArrowLeft className="h-4 w-4" />
       </Button>
@@ -186,11 +227,111 @@ export default function CustomerDetailPage() {
                   最近 {customer.lastVisitDate}
                 </Badge>
               )}
-              {customer.membershipCards?.length > 0 && (
-                <Badge className="bg-amber-100 text-amber-700">会员</Badge>
-              )}
+              {hasMember && <Badge className="bg-amber-100 text-amber-700">会员</Badge>}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ════ 会员卡区块 ════ */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">💳 会员卡 ({cards.length})</CardTitle>
+          <Button
+            size="sm"
+            onClick={() => {
+              setCardForm({
+                cardType: 'balance',
+                balance: 500,
+                totalTimes: 10,
+                discountRate: 0.85,
+                expiryDate: '',
+              })
+              setCardSheet(true)
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            开卡
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {!cards.length ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              暂无会员卡，点击"开卡"为客户办理
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {cards.map((card) => (
+                <div
+                  key={card.id}
+                  className={cn(
+                    'rounded-xl border-2 p-4',
+                    card.cardType === 'balance'
+                      ? 'border-amber-200 bg-amber-50/50'
+                      : 'border-blue-200 bg-blue-50/50'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {card.cardType === 'balance' ? (
+                        <CreditCard className="h-5 w-5 text-amber-600" />
+                      ) : (
+                        <Gift className="h-5 w-5 text-blue-600" />
+                      )}
+                      <span className="font-semibold">
+                        {card.cardType === 'balance' ? '储值卡' : '次卡'}
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {card.cardNo}
+                      </Badge>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {card.discountRate < 1
+                        ? `${(card.discountRate * 100).toFixed(0)}折`
+                        : '无折扣'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-baseline gap-1 mb-1">
+                    {card.cardType === 'balance' ? (
+                      <>
+                        <span className="text-2xl font-bold text-amber-700">
+                          ¥{card.balance.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">余额</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl font-bold text-blue-700">
+                          {card.totalTimes - card.usedTimes}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          / {card.totalTimes} 次剩余
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-3">
+                    <Clock className="h-3 w-3" />
+                    {card.expiryDate ? `有效期至 ${card.expiryDate}` : '无期限'}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRechargeCardId(card.id)
+                      setRechargeForm({ amount: 200, times: 5 })
+                      setRechargeSheet(true)
+                    }}
+                  >
+                    + 充值
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -243,7 +384,7 @@ export default function CustomerDetailPage() {
                       {pet.gender === 'male' ? '♂' : pet.gender === 'female' ? '♀' : ''}
                       {pet.weightKg ? ` ${pet.weightKg}kg` : ''}
                       {pet.vaccineExpiry && new Date(pet.vaccineExpiry) > new Date()
-                        ? ` · 疫苗 ✅`
+                        ? ' · 疫苗 ✅'
                         : pet.vaccineExpiry
                           ? ' · 疫苗 ⚠️'
                           : ''}
@@ -257,7 +398,7 @@ export default function CustomerDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 新增宠物 Sheet */}
+      {/* 添加宠物 Sheet */}
       <Sheet open={petSheet} onOpenChange={setPetSheet}>
         <SheetContent side="right" className="w-full max-w-md overflow-y-auto p-0">
           <SheetHeader className="border-b px-6 py-4">
@@ -345,6 +486,142 @@ export default function CustomerDetailPage() {
               disabled={saving || !petForm.name.trim()}
             >
               {saving ? '保存中...' : '添加'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* 开卡 Sheet */}
+      <Sheet open={cardSheet} onOpenChange={setCardSheet}>
+        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto p-0">
+          <SheetHeader className="border-b px-6 py-4">
+            <SheetTitle>办理会员卡</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 px-6 py-4">
+            <div>
+              <Label>卡类型 *</Label>
+              <Select
+                value={cardForm.cardType}
+                onValueChange={(v) => {
+                  setCardForm({
+                    ...cardForm,
+                    cardType: v ?? 'balance',
+                    balance: v === 'times' ? 0 : 500,
+                    totalTimes: v === 'times' ? 10 : 0,
+                  })
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="balance">💰 储值卡</SelectItem>
+                  <SelectItem value="times">🎫 次卡</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {cardForm.cardType === 'balance' ? (
+              <div>
+                <Label>充值金额 (¥)</Label>
+                <Input
+                  type="number"
+                  value={cardForm.balance}
+                  onChange={(e) => setCardForm({ ...cardForm, balance: Number(e.target.value) })}
+                />
+              </div>
+            ) : (
+              <div>
+                <Label>购买次数</Label>
+                <Input
+                  type="number"
+                  value={cardForm.totalTimes}
+                  onChange={(e) => setCardForm({ ...cardForm, totalTimes: Number(e.target.value) })}
+                />
+              </div>
+            )}
+            <div>
+              <Label>折扣率</Label>
+              <Select
+                value={String(cardForm.discountRate)}
+                onValueChange={(v) => setCardForm({ ...cardForm, discountRate: Number(v ?? '1') })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">无折扣 (100%)</SelectItem>
+                  <SelectItem value="0.95">95折</SelectItem>
+                  <SelectItem value="0.85">85折（推荐）</SelectItem>
+                  <SelectItem value="0.80">8折</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>有效期</Label>
+              <Input
+                type="date"
+                onChange={(e) => setCardForm({ ...cardForm, expiryDate: e.target.value })}
+              />
+            </div>
+          </div>
+          <SheetFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => setCardSheet(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setSaving(true)
+                createCardMutation.mutateAsync().finally(() => setSaving(false))
+              }}
+              disabled={saving}
+            >
+              确认开卡
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* 充值 Sheet */}
+      <Sheet open={rechargeSheet} onOpenChange={setRechargeSheet}>
+        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto p-0">
+          <SheetHeader className="border-b px-6 py-4">
+            <SheetTitle>充值</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 px-6 py-4">
+            <div>
+              <Label>充值金额 (¥)</Label>
+              <Input
+                type="number"
+                value={rechargeForm.amount}
+                onChange={(e) =>
+                  setRechargeForm({ ...rechargeForm, amount: Number(e.target.value) })
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">或充值次数</p>
+            <div>
+              <Label>充值次数</Label>
+              <Input
+                type="number"
+                value={rechargeForm.times}
+                onChange={(e) =>
+                  setRechargeForm({ ...rechargeForm, times: Number(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+          <SheetFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => setRechargeSheet(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                setSaving(true)
+                rechargeMutation.mutateAsync().finally(() => setSaving(false))
+              }}
+              disabled={saving}
+            >
+              确认充值
             </Button>
           </SheetFooter>
         </SheetContent>

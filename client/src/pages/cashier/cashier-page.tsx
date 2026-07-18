@@ -10,6 +10,7 @@ import {
   Check,
   PawPrint,
   UserRound,
+  CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -63,12 +64,19 @@ const METHOD_OPTIONS = [
     icon: Banknote,
     color: 'border-amber-400 bg-amber-50 hover:bg-amber-100',
   },
+  {
+    value: 'card_balance',
+    label: '会员卡余额',
+    icon: CreditCard,
+    color: 'border-purple-400 bg-purple-50 hover:bg-purple-100',
+  },
 ]
 
 const METHOD_LABELS: Record<string, string> = {
   wechat: '💰 微信',
   alipay: '💰 支付宝',
   cash: '💰 现金',
+  card_balance: '💳 会员卡',
 }
 
 async function fetchPending() {
@@ -114,12 +122,39 @@ export default function CashierPage() {
     }
   }, [paramApptId, pendingList])
 
+  // 客户会员卡
+  const [selectedCardId, setSelectedCardId] = useState<number | null>(null)
+  const { data: customerCards } = useQuery({
+    queryKey: ['customer-cards', selected?.customer.id],
+    queryFn: async () => {
+      if (!selected?.customer.id) return []
+      return (await apiClient.get(`/api/cards/customer/${selected.customer.id}`)).data.data as {
+        id: number
+        cardType: string
+        cardNo: string
+        balance: number
+        totalTimes: number
+        usedTimes: number
+      }[]
+    },
+    enabled: !!selected?.customer.id && method === 'card_balance',
+  })
+
   // 结账
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!selected) return
       const items = selected.appointmentItems.filter((i) => i.status !== 'cancelled')
       const total = items.reduce((s, i) => s + i.price, 0)
+
+      // 会员卡支付：先扣费，再结账
+      if (method === 'card_balance' && selectedCardId) {
+        await apiClient.post(`/api/cards/${selectedCardId}/deduct`, {
+          amount: total,
+          appointmentId: selected.id,
+        })
+      }
+
       return (
         await apiClient.post('/api/payments/checkout', {
           appointmentId: selected.id,
@@ -343,6 +378,42 @@ export default function CashierPage() {
                   </div>
                 </div>
 
+                {/* 会员卡选择 */}
+                {method === 'card_balance' && (
+                  <div>
+                    <Label>选择会员卡</Label>
+                    <div className="mt-2 space-y-2">
+                      {!customerCards?.length ? (
+                        <p className="text-xs text-muted-foreground">该客户暂无有效会员卡</p>
+                      ) : (
+                        customerCards.map((card) => (
+                          <button
+                            key={card.id}
+                            className={cn(
+                              'w-full rounded-lg border-2 p-3 text-left transition-colors',
+                              selectedCardId === card.id
+                                ? 'border-primary bg-primary/5'
+                                : 'hover:bg-muted'
+                            )}
+                            onClick={() => setSelectedCardId(card.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold">
+                                {card.cardType === 'balance' ? '💰' : '🎫'} {card.cardNo}
+                              </span>
+                              <span className="text-lg font-bold text-primary">
+                                {card.cardType === 'balance'
+                                  ? `¥${card.balance.toLocaleString()}`
+                                  : `${card.totalTimes - card.usedTimes}/${card.totalTimes}次`}
+                              </span>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* 交易号 */}
                 <div>
                   <Label>交易流水号（选填）</Label>
@@ -354,7 +425,9 @@ export default function CashierPage() {
                         ? '微信支付订单号...'
                         : method === 'alipay'
                           ? '支付宝交易号...'
-                          : '现金无需填'
+                          : method === 'card_balance'
+                            ? '会员卡支付无需填'
+                            : '现金无需填'
                     }
                   />
                 </div>
