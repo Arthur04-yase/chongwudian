@@ -51,6 +51,7 @@ import customerRoutes from './routes/customers.js'
 import petRoutes from './routes/pets.js'
 import appointmentRoutes from './routes/appointments.js'
 import paymentRoutes from './routes/payments.js'
+import dashboardRoutes from './routes/dashboard.js'
 app.use('/api/auth', authRoutes)
 app.use('/api/services', serviceRoutes)
 app.use('/api/staff', staffRoutes)
@@ -58,6 +59,7 @@ app.use('/api/customers', customerRoutes)
 app.use('/api/pets', petRoutes)
 app.use('/api/appointments', appointmentRoutes)
 app.use('/api/payments', paymentRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 // ─── 404 — 接口不存在 ──────────────────────────
 app.use((_req, _res, next) => {
