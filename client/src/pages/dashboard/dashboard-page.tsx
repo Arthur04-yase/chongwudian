@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   CalendarDays,
   Scissors,
@@ -52,6 +53,7 @@ const SPECIES_EMOJI: Record<string, string> = { dog: '🐕', cat: '🐈', other:
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dashboard-today'],
@@ -166,32 +168,36 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   {services.map((s) => (
-                    <button
-                      key={s.id}
-                      className="flex w-full items-center gap-4 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
-                      onClick={() => navigate(`/appointments/${s.id}`)}
-                    >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
-                        {SPECIES_EMOJI[s.petSpecies] || '🐾'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{s.petName}</span>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {s.services.join(' + ')}
-                          </Badge>
+                    <div key={s.id} className="flex items-center gap-2">
+                      <button
+                        className="flex flex-1 items-center gap-4 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 min-w-0"
+                        onClick={() => navigate(`/appointments/${s.id}`)}
+                      >
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
+                          {SPECIES_EMOJI[s.petSpecies] || '🐾'}
                         </div>
-                        <p className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <UserRound className="h-3 w-3" />
-                          {s.groomerName}
-                          <Clock className="h-3 w-3 ml-1" />
-                          {s.startTime} 开始
-                        </p>
-                      </div>
-                      <Badge variant="default" className="shrink-0 animate-pulse text-[10px]">
-                        进行中
-                      </Badge>
-                    </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{s.petName}</span>
+                            <Badge variant="secondary" className="text-[10px]">{s.services.join(' + ')}</Badge>
+                          </div>
+                          <p className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <UserRound className="h-3 w-3" />{s.groomerName}
+                            <Clock className="h-3 w-3 ml-1" />{s.startTime} 开始
+                          </p>
+                        </div>
+                      </button>
+                      <Button size="sm" className="shrink-0 h-8 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          apiClient.patch(`/api/appointments/${s.id}/status`, { status: 'completed' }).then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['dashboard-today'] })
+                            toast.success(`${s.petName} 已完成`)
+                          }).catch(() => toast.error('操作失败'))
+                        }}>
+                        <CheckCircle className="mr-1 h-3.5 w-3.5" />完成
+                      </Button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -343,44 +349,28 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* 快捷入口 */}
+          {/* 快捷入口 — 2+2布局 */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">⚡ 快捷操作</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button
-                className="w-full justify-start"
-                size="lg"
-                onClick={() => navigate('/appointments/new')}
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                新增预约
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => navigate('/cashier')}
-              >
-                <Banknote className="mr-2 h-5 w-5" />
-                收银台
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => navigate('/customers')}
-              >
-                <PawPrint className="mr-2 h-5 w-5" />
-                客户管理
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => navigate('/appointments')}
-              >
-                <CalendarDays className="mr-2 h-5 w-5" />
-                今日预约
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button className="h-20 flex-col gap-1" variant="default" size="lg" onClick={() => navigate('/appointments/new')}>
+                  <Plus className="h-6 w-6" />新增预约
+                </Button>
+                <Button className="h-20 flex-col gap-1" variant="default" size="lg" onClick={() => navigate('/cashier')}>
+                  <Banknote className="h-6 w-6" />收银台
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" onClick={() => navigate('/customers')}>
+                  <PawPrint className="mr-1 h-4 w-4" />客户
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/appointments')}>
+                  <CalendarDays className="mr-1 h-4 w-4" />今日预约
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

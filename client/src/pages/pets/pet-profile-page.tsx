@@ -247,10 +247,12 @@ export default function PetProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       {/* ── 顶部导航 ── */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/customers/${pet.customer.id}`)}>
+          <ArrowLeft className="mr-1 h-4 w-4" />{pet.customer.name}
         </Button>
+        <span className="text-muted-foreground">/</span>
+        <span className="text-sm font-semibold">{pet.name}</span>
         <div className="flex-1" />
         <Button size="sm" onClick={openEdit}>
           <Pencil className="mr-1 h-4 w-4" />

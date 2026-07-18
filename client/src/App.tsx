@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AppLayout } from '@/components/layout/app-layout'
 import { AuthProvider } from '@/hooks/use-auth'
+import { GlobalSearch } from '@/components/shared/global-search'
 
 // Lazy-loaded pages
 import { lazy, Suspense } from 'react'
@@ -50,6 +51,7 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <Toaster richColors closeButton />
+            <GlobalSearch />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* 公开路由 */}
