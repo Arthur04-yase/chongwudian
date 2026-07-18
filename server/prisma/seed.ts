@@ -3,10 +3,20 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+// ─── 动态日期工具 — 让种子数据永远以"今天"为基准 ───
+const NOW = new Date()
+function dd(offset: number): string {
+  const d = new Date(NOW)
+  d.setDate(d.getDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+function dt(offset: number, time: string): Date {
+  return new Date(`${dd(offset)}T${time}`)
+}
+
 /**
  * 生成预约编号
  * 格式：APT + YYYYMMDD + 4位序号
- * 生产环境建议使用数据库序列或 Redis 自增
  */
 function generateAppointmentNo(date: string, seq: number): string {
   const datePart = date.replace(/-/g, '')
@@ -78,7 +88,7 @@ async function main() {
       address: '阳光花园3-502',
       source: '朋友介绍',
       totalSpent: 4280,
-      lastVisitDate: '2026-07-09',
+      lastVisitDate: dd(-7),
       visitCount: 12,
     },
   })
@@ -90,7 +100,7 @@ async function main() {
       address: '翠园新村12-301',
       source: '大众点评',
       totalSpent: 1560,
-      lastVisitDate: '2026-07-12',
+      lastVisitDate: dd(-4),
       visitCount: 5,
     },
   })
@@ -102,7 +112,7 @@ async function main() {
       address: '碧水湾7-1102',
       source: '抖音',
       totalSpent: 890,
-      lastVisitDate: '2026-07-02',
+      lastVisitDate: dd(-14),
       visitCount: 3,
     },
   })
@@ -114,7 +124,7 @@ async function main() {
       address: '龙湖天街5-801',
       source: '路过',
       totalSpent: 3200,
-      lastVisitDate: '2026-07-15',
+      lastVisitDate: dd(-1),
       visitCount: 9,
     },
   })
@@ -126,7 +136,7 @@ async function main() {
       address: '春江花月8-203',
       source: '朋友介绍',
       totalSpent: 2100,
-      lastVisitDate: '2026-06-30',
+      lastVisitDate: dd(-18),
       visitCount: 7,
     },
   })
@@ -415,7 +425,7 @@ async function main() {
   // ══════════════════════════════════════════════════════════
   // 6. 预约记录
   // ══════════════════════════════════════════════════════════
-  const today = '2026-07-16'
+  const today = dd(0)
 
   const appt1 = await prisma.appointment.create({
     data: {
@@ -588,7 +598,7 @@ async function main() {
       appointmentId: appt6.id,
       amount: 323,
       method: 'wechat',
-      paidAt: new Date('2026-06-18T03:45:00Z'),
+      paidAt: dt(-30, '03:45:00Z'),
       createdBy: receptionistChen.id,
     },
   })
@@ -599,7 +609,7 @@ async function main() {
       appointmentId: appt4.id,
       amount: 80,
       method: 'cash',
-      paidAt: new Date('2026-07-16T01:20:00Z'),
+      paidAt: dt(0, '01:20:00Z'),
       createdBy: receptionistChen.id,
     },
   })
@@ -647,42 +657,42 @@ async function main() {
         staffId: groomerZhang.id,
         logType: 'feeding',
         content: '早上8:30喂食，吃了大半碗',
-        createdAt: new Date('2026-07-15T00:30:00Z'),
+        createdAt: dt(-1, '00:30:00Z'),
       },
       {
         boardingId: b1.id,
         staffId: receptionistChen.id,
         logType: 'cleaning',
         content: '清理猫砂盆，小便正常',
-        createdAt: new Date('2026-07-15T02:00:00Z'),
+        createdAt: dt(-1, '02:00:00Z'),
       },
       {
         boardingId: b1.id,
         staffId: groomerZhang.id,
         logType: 'feeding',
         content: '晚上18:00喂食，全部吃完，精神状态好转',
-        createdAt: new Date('2026-07-15T10:00:00Z'),
+        createdAt: dt(-1, '10:00:00Z'),
       },
       {
         boardingId: b1.id,
         staffId: receptionistChen.id,
         logType: 'other',
         content: '小黑今天主动出来蹭人了！进步很大',
-        createdAt: new Date('2026-07-16T00:00:00Z'),
+        createdAt: dt(0, '00:00:00Z'),
       },
       {
         boardingId: b2.id,
         staffId: groomerLi.id,
         logType: 'walking',
         content: '下午遛弯25分钟，在草坪上玩得很开心',
-        createdAt: new Date('2026-07-15T08:00:00Z'),
+        createdAt: dt(-1, '08:00:00Z'),
       },
       {
         boardingId: b2.id,
         staffId: groomerZhang.id,
         logType: 'feeding',
         content: '早上喂食，全部光盘',
-        createdAt: new Date('2026-07-16T00:00:00Z'),
+        createdAt: dt(0, '00:00:00Z'),
       },
     ],
   })
@@ -790,21 +800,21 @@ async function main() {
     data: [
       {
         staffId: groomerZhang.id,
-        date: '2026-07-16',
+        date: dd(0),
         startTime: '08:30',
         endTime: '18:00',
         maxAppointments: 8,
       },
       {
         staffId: groomerLi.id,
-        date: '2026-07-16',
+        date: dd(0),
         startTime: '09:00',
         endTime: '18:00',
         maxAppointments: 8,
       },
       {
         staffId: receptionistChen.id,
-        date: '2026-07-16',
+        date: dd(0),
         startTime: '08:00',
         endTime: '20:00',
         maxAppointments: 20,
